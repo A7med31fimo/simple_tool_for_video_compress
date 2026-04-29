@@ -1,0 +1,49 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.env
+.env.local
+
+# PHP/Laravel
+backend/vendor/
+backend/.env
+backend/.env.local
+backend/storage/
+backend/bootstrap/cache/
+backend/.phpunit.result.cache
+
+# React
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Video files (large)
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.flv
+*.wmv
+*.webm
+
+# Temporary
+tmp/
+temp/
+.cache/
