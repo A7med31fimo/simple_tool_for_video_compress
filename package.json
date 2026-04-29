@@ -8,7 +8,15 @@
   },
   "scripts": {
     "start": "node cli/index.js",
-    "dev": "node cli/index.js",
+    "dev": "concurrently \"npm run backend:serve\" \"npm run frontend:dev\" \"npm run worker\"",
+    "backend:serve": "cd backend && php artisan serve",
+    "backend:migrate": "cd backend && php artisan migrate",
+    "backend:install": "cd backend && composer install",
+    "frontend:dev": "cd frontend && npm run dev",
+    "frontend:build": "cd frontend && npm run build",
+    "frontend:install": "cd frontend && npm install",
+    "worker": "cd backend && php artisan compression:process --watch",
+    "install:all": "npm install && npm run backend:install && npm run frontend:install",
     "test": "jest",
     "lint": "eslint cli/"
   },
@@ -27,7 +35,8 @@
     "chalk": "^5.3.0",
     "ora": "^8.0.1",
     "fluent-ffmpeg": "^2.1.2",
-    "axios": "^1.6.5"
+    "axios": "^1.6.5",
+    "concurrently": "^8.2.2"
   },
   "devDependencies": {
     "jest": "^29.7.0",
