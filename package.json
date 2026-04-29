@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node cli/index.js",
-    "dev": "concurrently \"npm run backend:serve\" \"npm run frontend:dev\" \"npm run worker\"",
+    "dev": "concurrently --kill-others \"npm run backend:serve\" \"npm run frontend:dev\" \"npm run worker\"",
     "backend:serve": "cd backend && php artisan serve",
     "backend:migrate": "cd backend && php artisan migrate",
     "backend:install": "cd backend && composer install",
