@@ -5,7 +5,12 @@
       "Bash(git add *)",
       "Bash(git commit -m 'Initial project setup: CLI, Laravel backend, React frontend *)",
       "Bash(git commit *)",
-      "Bash(where ffmpeg *)"
+      "Bash(where ffmpeg *)",
+      "Bash(npm run *)",
+      "Bash(php artisan *)",
+      "Bash(pkill -f \"compression:process\")",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -version)",
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -codecs)"
     ]
   }
 }

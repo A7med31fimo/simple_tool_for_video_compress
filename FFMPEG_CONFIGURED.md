@@ -6,14 +6,14 @@ Your FFmpeg installation is now properly configured for H.264 compression resear
 
 **FFmpeg Location:**
 ```
-C:\ProgramData\chocolatey\bin\ffmpeg.exe
+C:\ffmpeg\bin\ffmpeg.exe
 ```
 
 **Backend Configuration:**
 ```
 backend/.env
-FFMPEG_PATH=C:\ProgramData\chocolatey\bin\ffmpeg.exe
-FFPROBE_PATH=C:\ProgramData\chocolatey\bin\ffprobe.exe
+FFMPEG_PATH=C:\ffmpeg\bin\ffmpeg.exe
+FFPROBE_PATH=C:\ffmpeg\bin\ffprobe.exe
 ```
 
 ## ✨ Your FFmpeg Build Includes

@@ -14,6 +14,44 @@ class CompressionJobController extends Controller
         return CompressionJob::orderBy('created_at', 'desc')->paginate(20);
     }
 
+    /**
+     * Upload a video file to the server's storage directory and return
+     * the absolute paths FFmpeg needs for input and output.
+     *
+     * This is the missing step that caused the original "No such file or
+     * directory" error: the old code sent only a bare filename, so FFmpeg
+     * looked for the file relative to its working directory (which is the
+     * Laravel backend root) and never found it.
+     */
+    public function upload(Request $request)
+    {
+        $request->validate(['video' => 'required|file|mimetypes:video/*']);
+
+        $storagePath = config('compression.storage_path', 'storage/videos');
+        // Resolve to an absolute path so nothing depends on cwd
+        $storageDir = realpath(base_path($storagePath))
+            ?: base_path($storagePath);
+
+        if (!is_dir($storageDir)) {
+            mkdir($storageDir, 0755, true);
+        }
+
+        $file          = $request->file('video');
+        $originalName  = $file->getClientOriginalName();
+        // Use a unique prefix to avoid collisions while keeping the original name readable
+        $uniqueName    = uniqid('', true) . '_' . preg_replace('/[^A-Za-z0-9._-]/', '_', $originalName);
+        $file->move($storageDir, $uniqueName);
+
+        $ext        = pathinfo($uniqueName, PATHINFO_EXTENSION);
+        $base       = pathinfo($uniqueName, PATHINFO_FILENAME);
+        $outputName = $base . '_compressed.' . $ext;
+
+        return response()->json([
+            'input_path'  => $storageDir . DIRECTORY_SEPARATOR . $uniqueName,
+            'output_path' => $storageDir . DIRECTORY_SEPARATOR . $outputName,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -84,8 +122,20 @@ class CompressionJobController extends Controller
             ]);
 
             $ffmpegPath = config('compression.ffmpeg_path', 'ffmpeg');
-            $inputFile = $job->input_file;
+
+            // Resolve to an absolute, real path so FFmpeg never relies on cwd.
+            // realpath() returns false when the file doesn't exist yet (output),
+            // so we only apply it to the input file.
+            $inputFile = realpath($job->input_file) ?: $job->input_file;
             $outputFile = $job->output_file;
+
+            // Guard: fail fast with a clear message rather than a cryptic FFmpeg error
+            if (!file_exists($inputFile)) {
+                throw new \Exception(
+                    "Input file not found on server: {$inputFile}. " .
+                    "Ensure the file was uploaded via /api/upload before creating the job."
+                );
+            }
 
             // Build FFmpeg command
             $command = [
@@ -93,15 +143,15 @@ class CompressionJobController extends Controller
                 '-i', $inputFile,
                 '-c:v', 'libx264',
                 '-preset', $job->preset,
-                '-crf', $job->crf,
+                '-crf', (string) $job->crf,
                 '-profile:v', $job->profile,
-                '-level', $job->level,
+                '-level', (string) $job->level,
                 '-c:a', 'aac',
                 '-b:a', '128k',
             ];
 
             if ($job->bitrate) {
-                array_push($command, '-b:v', $job->bitrate);
+                array_push($command, '-b:v', (string) $job->bitrate);
             }
 
             array_push($command, '-y', $outputFile);

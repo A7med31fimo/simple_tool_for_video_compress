@@ -48,24 +48,34 @@ function processJob(CompressionJob $job)
         ]);
 
         $ffmpegPath = config('compression.ffmpeg_path', 'ffmpeg');
-        $inputFile = $job->input_file;
+
+        // Resolve to absolute path — critical on Windows where the worker
+        // process cwd may differ from where files were stored.
+        $inputFile = realpath($job->input_file) ?: $job->input_file;
         $outputFile = $job->output_file;
 
-        // Build FFmpeg command
+        if (!file_exists($inputFile)) {
+            throw new \Exception(
+                "Input file not found: {$inputFile}. " .
+                "Ensure the file was uploaded via /api/upload before creating the job."
+            );
+        }
+
+        // Build FFmpeg command — cast numerics to string for Symfony Process
         $command = [
             $ffmpegPath,
             '-i', $inputFile,
             '-c:v', 'libx264',
             '-preset', $job->preset,
-            '-crf', $job->crf,
+            '-crf', (string) $job->crf,
             '-profile:v', $job->profile,
-            '-level', $job->level,
+            '-level', (string) $job->level,
             '-c:a', 'aac',
             '-b:a', '128k',
         ];
 
         if ($job->bitrate) {
-            array_push($command, '-b:v', $job->bitrate);
+            array_push($command, '-b:v', (string) $job->bitrate);
         }
 
         array_push($command, '-y', $outputFile);

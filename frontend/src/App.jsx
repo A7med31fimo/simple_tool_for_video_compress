@@ -77,10 +77,19 @@ function App() {
       const fileName = formData.file.name
       const outputFileName = `${fileName.split('.')[0]}_compressed.${fileName.split('.').pop()}`
 
-      // Create job in backend
+      // Step 1: Upload the actual file to the server so FFmpeg can access it
+      const uploadData = new FormData()
+      uploadData.append('video', formData.file)
+      const uploadResponse = await axios.post('/api/upload', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      const serverInputPath = uploadResponse.data.input_path
+      const serverOutputPath = uploadResponse.data.output_path
+
+      // Step 2: Create the compression job using the resolved server-side paths
       const response = await axios.post('/api/jobs', {
-        input_file: fileName,
-        output_file: outputFileName,
+        input_file: serverInputPath,
+        output_file: serverOutputPath,
         preset: formData.preset,
         crf: parseInt(formData.crf),
         profile: formData.profile,

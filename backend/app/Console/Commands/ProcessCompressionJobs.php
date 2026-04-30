@@ -58,29 +58,36 @@ class ProcessCompressionJobs extends Command
             ]);
 
             $ffmpegPath = config('compression.ffmpeg_path', 'ffmpeg');
-            $inputFile = $job->input_file;
+
+            // Resolve to absolute path; realpath() handles forward/backslash
+            // differences on Windows and eliminates cwd-relative path bugs.
+            $inputFile = realpath($job->input_file) ?: $job->input_file;
             $outputFile = $job->output_file;
 
-            // Check if input file exists
+            // Fail fast with a clear, actionable message
             if (!file_exists($inputFile)) {
-                throw new \Exception("Input file not found: {$inputFile}");
+                throw new \Exception(
+                    "Input file not found: {$inputFile}. " .
+                    "Was the file uploaded via /api/upload?"
+                );
             }
 
-            // Build FFmpeg command
+            // Build FFmpeg command — all numeric values must be cast to string
+            // so Symfony Process doesn't inject unexpected quotes on Windows.
             $command = [
                 $ffmpegPath,
                 '-i', $inputFile,
                 '-c:v', 'libx264',
                 '-preset', $job->preset,
-                '-crf', $job->crf,
+                '-crf', (string) $job->crf,
                 '-profile:v', $job->profile,
-                '-level', $job->level,
+                '-level', (string) $job->level,
                 '-c:a', 'aac',
                 '-b:a', '128k',
             ];
 
             if ($job->bitrate) {
-                array_push($command, '-b:v', $job->bitrate);
+                array_push($command, '-b:v', (string) $job->bitrate);
             }
 
             array_push($command, '-y', $outputFile);
