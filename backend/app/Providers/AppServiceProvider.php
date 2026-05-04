@@ -19,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Force JSON responses for API requests to prevent HTML error pages
+        \Illuminate\Support\Facades\Request::macro('wantsJson', function () {
+            return true;
+        });
     }
 }

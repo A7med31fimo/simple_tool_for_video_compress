@@ -1,5 +1,8 @@
 <?php
 
+// Buffer all output to prevent 'headers already sent' errors
+ob_start();
+
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Request;
 

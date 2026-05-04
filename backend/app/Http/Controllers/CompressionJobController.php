@@ -25,6 +25,7 @@ class CompressionJobController extends Controller
      */
     public function upload(Request $request)
     {
+        \Log::info('[Upload] Request received', ['files' => $request->allFiles()]);
         $request->validate(['video' => 'required|file|mimetypes:video/*']);
 
         $storagePath = config('compression.storage_path', 'storage/videos');
@@ -46,10 +47,12 @@ class CompressionJobController extends Controller
         $base       = pathinfo($uniqueName, PATHINFO_FILENAME);
         $outputName = $base . '_compressed.' . $ext;
 
-        return response()->json([
+        $response = [
             'input_path'  => $storageDir . DIRECTORY_SEPARATOR . $uniqueName,
             'output_path' => $storageDir . DIRECTORY_SEPARATOR . $outputName,
-        ]);
+        ];
+        \Log::info('[Upload] Returning response', $response);
+        return response()->json($response, 200);
     }
 
     public function store(Request $request)

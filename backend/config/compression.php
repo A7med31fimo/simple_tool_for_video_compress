@@ -4,7 +4,7 @@ return [
     'ffmpeg_path' => env('FFMPEG_PATH', 'ffmpeg'),
     'ffprobe_path' => env('FFPROBE_PATH', 'ffprobe'),
     'timeout' => env('COMPRESSION_TIMEOUT', 3600),
-    'storage_path' => env('COMPRESSION_STORAGE', 'videos'),
+    'storage_path' => env('COMPRESSION_STORAGE', 'storage/videos'),
     'presets' => [
         'ultrafast' => [
             'preset' => 'ultrafast',

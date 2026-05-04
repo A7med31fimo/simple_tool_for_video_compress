@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import './index.css'
 
+// Always send Accept: application/json so Laravel returns JSON errors instead of HTML pages
+axios.defaults.headers.common['Accept'] = 'application/json'
+
 function App() {
   const [jobs, setJobs] = useState([])
   const [stats, setStats] = useState(null)
@@ -74,28 +77,45 @@ function App() {
     setSuccess(null)
 
     try {
-      const fileName = formData.file.name
-      const outputFileName = `${fileName.split('.')[0]}_compressed.${fileName.split('.').pop()}`
-
-      // Step 1: Upload the actual file to the server so FFmpeg can access it
+      // Step 1: Upload the actual file bytes to the server.
       const uploadData = new FormData()
       uploadData.append('video', formData.file)
       const uploadResponse = await axios.post('/api/upload', uploadData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      const serverInputPath = uploadResponse.data.input_path
-      const serverOutputPath = uploadResponse.data.output_path
 
-      // Step 2: Create the compression job using the resolved server-side paths
-      const response = await axios.post('/api/jobs', {
+      let serverInputPath, serverOutputPath
+      if (typeof uploadResponse.data === 'string') {
+        // Axios couldn't auto-parse — only attempt JSON.parse if it looks like JSON
+        if (uploadResponse.data.trimStart().startsWith('{')) {
+          const parsed = JSON.parse(uploadResponse.data)
+          serverInputPath = parsed.input_path
+          serverOutputPath = parsed.output_path
+        } else {
+          throw new Error(`Server returned an unexpected response (HTTP ${uploadResponse.status}). Check your Laravel logs.`)
+        }
+      } else {
+        // Axios already parsed the JSON object — use it directly
+        serverInputPath = uploadResponse.data.input_path
+        serverOutputPath = uploadResponse.data.output_path
+      }
+
+      if (!serverInputPath || !serverOutputPath) {
+        throw new Error('Upload succeeded but server did not return file paths.')
+      }
+
+      // Step 2: crf from range input is always a string — parse and clamp safely.
+      const crfValue = Math.max(0, Math.min(51, parseInt(formData.crf, 10) || 23))
+      const jobPayload = {
         input_file: serverInputPath,
         output_file: serverOutputPath,
         preset: formData.preset,
-        crf: parseInt(formData.crf),
+        crf: crfValue,
         profile: formData.profile,
-        level: formData.level,
-        bitrate: formData.bitrate || null,
-      })
+        level: String(formData.level),
+        bitrate: formData.bitrate?.trim() || null,
+      }
+      const response = await axios.post('/api/jobs', jobPayload)
 
       setSuccess(`Job created successfully! ID: ${response.data.id}`)
       setFormData({
@@ -108,14 +128,34 @@ function App() {
       })
       document.getElementById('fileInput').value = ''
 
-      // Refresh jobs
       setTimeout(() => {
         fetchJobs()
         fetchStats()
       }, 500)
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to create compression job')
-      console.error('Error:', error)
+      console.error('[VideoCompress] Error:', error)
+
+      let errorMessage = 'Failed to create compression job'
+
+      if (error.response?.data) {
+        if (typeof error.response.data === 'string' && error.response.data.includes('<')) {
+          errorMessage = 'Server error: ' + error.response.status + ' - Check browser console for details'
+        } else {
+          const laravelErrors = error.response.data.errors
+          if (laravelErrors) {
+            const fieldMessages = Object.entries(laravelErrors)
+              .map(([field, msgs]) => `${field}: ${msgs.join(', ')}`)
+              .join(' | ')
+            errorMessage = `Validation failed — ${fieldMessages}`
+          } else {
+            errorMessage = error.response.data.message || error.message
+          }
+        }
+      } else {
+        errorMessage = error.message
+      }
+
+      setError(errorMessage)
     } finally {
       setUploading(false)
     }
